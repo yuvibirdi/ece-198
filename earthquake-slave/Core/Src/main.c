@@ -115,8 +115,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+    // LED BLINKING
     HAL_GPIO_TogglePin (GPIOA, GPIO_PIN_5);
-    HAL_Delay (2000);   /* Insert delay 100 ms */
+    HAL_Delay (100);   // Delay 100 ms
   }
   /* USER CODE END 3 */
 }
