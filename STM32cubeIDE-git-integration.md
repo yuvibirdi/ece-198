@@ -1,9 +1,7 @@
 # About EGit
-I used EGit to manipulate the repository directly from STM32cubeIDE. It should work with MacOS: I (Vincent) am using Windows.
-I added my own STM32 project "earthquake-slave" since STM32cubeIDE was not recognizing the "slave" and "master" projects cloned from GitHub as source code and refused to build anything in it. 
-Currently, EGit is the only way I know how to use GitHub with STM32 programming.
-VSCode was used to add markdown files (I don't think EGit can do that).
-I will refer back to this doc in upper years if I need to do MCU programming again.
+I used EGit to manipulate the repository directly from STM32cubeIDE. It should work with MacOS: I (Vincent) am using Windows.<br /><br />
+I added my own STM32 project "earthquake-slave" since STM32cubeIDE was not recognizing the "slave" and "master" projects cloned from GitHub as source code and refused to build anything in it. Currently, EGit is the only way I know how to use GitHub with STM32 programming. <br /><br />
+VSCode was used to add markdown files (I don't think EGit can do that). I will also refer back to this doc in upper years if I need to do MCU programming again. <br />
 
 # How to install and use EGit
 - Open STM32cubeIDE
