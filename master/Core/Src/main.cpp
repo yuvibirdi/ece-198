@@ -82,6 +82,30 @@ void buzz(bool state){
 //	HAL_Delay(100);
 }
 
+// Non-blocking buzzer function
+void controlBuzzer(bool state, uint16_t frequency) {
+    static uint32_t lastToggleTime = 0;    // Stores the last toggle time
+    static bool buzzerState = false;      // Tracks the current state of the buzzer (on/off)
+
+    if (state && frequency > 0) {
+        // Calculate half-period in milliseconds
+        uint32_t halfPeriodMs = 500 / frequency; // (1000 ms / frequency) / 2
+
+        // Toggle the buzzer pin when the half-period has elapsed
+        if ((HAL_GetTick() - lastToggleTime) >= halfPeriodMs) {
+            lastToggleTime = HAL_GetTick(); // Reset the toggle timer
+
+            // Toggle the GPIO pin state
+            buzzerState = !buzzerState;
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, buzzerState ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+    } else {
+        // Turn off the buzzer if the state is false or frequency is 0
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
+        buzzerState = false;
+    }
+}
+
 int main(void)
 {
 
@@ -116,15 +140,44 @@ int main(void)
   buzz(0);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-//  while (1)
-//  {
-//    /* USER CODE END WHILE */
-//	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1);
-//	  HAL_Delay(500);
-//	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0);
-//	  HAL_Delay(500);
-//    /* USER CODE BEGIN 3 */
-//  }
+  
+  bool buzzer_state = false;
+  const int g = 9.81;
+  
+  while (1)
+  {
+    // read accelerometer input
+    int acceleration;
+
+    
+    if(acceleration>0.02*g){
+      // Substantial seismic activity is occurring: The severity of ground shaking
+      // disrupts human activities.
+
+
+      if(acceleration>0.1*g){
+        if(acceleration>0.2*g){
+          
+        }
+      }
+      else {
+        if(alarm)
+      }
+    }
+    else {
+      if(buzzer_state){
+        buzzer_state = false;
+        buzz(buzzer_state);
+      }
+    }
+
+  }
+  //  /* USER CODE END WHILE */
+	//   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1);
+	//   HAL_Delay(500);
+	//   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0);
+	//   HAL_Delay(500);
+  //  /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */
 }
 
