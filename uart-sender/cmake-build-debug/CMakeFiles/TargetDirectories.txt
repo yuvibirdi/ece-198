@@ -1,0 +1,3 @@
+/Users/yb/STM32CubeIDE/workspace_1.16.1/uart-sender/cmake-build-debug/CMakeFiles/slave.elf.dir
+/Users/yb/STM32CubeIDE/workspace_1.16.1/uart-sender/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/yb/STM32CubeIDE/workspace_1.16.1/uart-sender/cmake-build-debug/CMakeFiles/rebuild_cache.dir
