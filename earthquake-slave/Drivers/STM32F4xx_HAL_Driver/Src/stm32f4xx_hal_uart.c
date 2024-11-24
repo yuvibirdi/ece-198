@@ -1789,21 +1789,18 @@ HAL_StatusTypeDef HAL_UARTEx_ReceiveToIdle_DMA(UART_HandleTypeDef *huart, uint8_
     status =  UART_Start_Receive_DMA(huart, pData, Size);
 
     /* Check Rx process has been successfully started */
-    if (status == HAL_OK)
+    if (huart->ReceptionType == HAL_UART_RECEPTION_TOIDLE)
     {
-      if (huart->ReceptionType == HAL_UART_RECEPTION_TOIDLE)
-      {
-        __HAL_UART_CLEAR_IDLEFLAG(huart);
-        ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
-      }
-      else
-      {
-        /* In case of errors already pending when reception is started,
-           Interrupts may have already been raised and lead to reception abortion.
-           (Overrun error for instance).
-           In such case Reception Type has been reset to HAL_UART_RECEPTION_STANDARD. */
-        status = HAL_ERROR;
-      }
+      __HAL_UART_CLEAR_IDLEFLAG(huart);
+      ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_IDLEIE);
+    }
+    else
+    {
+      /* In case of errors already pending when reception is started,
+         Interrupts may have already been raised and lead to reception abortion.
+         (Overrun error for instance).
+         In such case Reception Type has been reset to HAL_UART_RECEPTION_STANDARD. */
+      status = HAL_ERROR;
     }
 
     return status;
@@ -2528,6 +2525,28 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
         /*Call legacy weak Rx Event callback*/
         HAL_UARTEx_RxEventCallback(huart, (huart->RxXferSize - huart->RxXferCount));
 #endif /* USE_HAL_UART_REGISTER_CALLBACKS */
+      }
+      else
+      {
+        /* If DMA is in Circular mode, Idle event is to be reported to user
+           even if occurring after a Transfer Complete event from DMA */
+        if (nb_remaining_rx_data == huart->RxXferSize)
+        {
+          if (huart->hdmarx->Init.Mode == DMA_CIRCULAR)
+          {
+            /* Initialize type of RxEvent that correspond to RxEvent callback execution;
+               In this case, Rx Event type is Idle Event */
+            huart->RxEventType = HAL_UART_RXEVENT_IDLE;
+
+#if (USE_HAL_UART_REGISTER_CALLBACKS == 1)
+            /*Call registered Rx Event callback*/
+            huart->RxEventCallback(huart, huart->RxXferSize);
+#else
+            /*Call legacy weak Rx Event callback*/
+            HAL_UARTEx_RxEventCallback(huart, huart->RxXferSize);
+#endif /* (USE_HAL_UART_REGISTER_CALLBACKS) */
+          }
+        }
       }
       return;
     }
@@ -3360,7 +3379,6 @@ static void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef *huart = (UART_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
   huart->RxXferCount = 0x00U;
-  huart->TxXferCount = 0x00U;
 
 #if (USE_HAL_UART_REGISTER_CALLBACKS == 1)
   /*Call registered error callback*/

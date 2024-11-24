@@ -18,12 +18,15 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 /* USER CODE END PTD */
+
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MPU6050_ADDR (0x68 << 1)
@@ -50,22 +53,35 @@
 
 #define ACCEL_ZOUT_H 0x3F
 #define ACCEL_ZOUT_L 0x40
+
+typedef struct{
+	float AccelX_g, AccelY_g, AccelZ_g;
+}Accel_xyz;
 /* USER CODE END PD */
+
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* USER CODE END PM */
+
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
+
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
+
 /* USER CODE END PV */
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
+
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -78,7 +94,7 @@ uint8_t done_reset_func = 0;
 
 int16_t AccelX, AccelY, AccelZ;
 float AccelX_g, AccelY_g, AccelZ_g;
-
+// Accelerometer Data Calibration
 // Initialize MPU
 void MPU6050_Init() {
   ret = HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDR, 1, 100);
@@ -155,10 +171,10 @@ void I2C_Bus_Recovery(void) {
 
 void MPU6050_Read_Accel(int16_t *AccelX, int16_t *AccelY, int16_t *AccelZ) {
   uint8_t buffer[6]; // Buffer to store the raw data (6 bytes for X, Y, Z)
-
   // Read 6 bytes starting from ACCEL_XOUT_H (0x3B)
   if (HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, I2C_MEMADD_SIZE_8BIT, buffer, 6, HAL_MAX_DELAY) == HAL_OK) {
     // Combine high and low bytes for each axis
+//	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 1000)
     *AccelX = (int16_t)(buffer[0] << 8 | buffer[1]); // X-axis
     *AccelY = (int16_t)(buffer[2] << 8 | buffer[3]); // Y-axis
     *AccelZ = (int16_t)(buffer[4] << 8 | buffer[5]); // Z-axis
@@ -172,9 +188,31 @@ void MPU6050_Read_Accel(int16_t *AccelX, int16_t *AccelY, int16_t *AccelZ) {
 }
 
 float MPU6050_Convert_to_g(int16_t raw_value) {
-  return (float)raw_value / 16384.0;  // Assuming default ±2g sensitivity
+  return (float)(raw_value / 16384.0);  // Assuming default ±2g sensitivity
 }
-//* USER CODE END 0 */
+
+float[] MPU6050_Calibration(){
+    float AccelX_g = 0, AccelY_g = 0, AccelZ_g = 0;
+    float AccelX_g_sum = 0, AccelY_g_sum = 0, AccelZ_g_sum = 0;
+    float cnt = 0;
+    while(cnt <= 1024){
+        MPU6050_Read_Accel(&AccelX, &AccelY, &AccelZ);
+        AccelX_g = MPU6050_Convert_to_g(AccelX);
+        AccelY_g = MPU6050_Convert_to_g(AccelY);
+        AccelZ_g = MPU6050_Convert_to_g(AccelZ);
+        AccelX_g_sum +=AccelX_g;
+        AccelY_g_sum +=AccelY_g;
+        AccelZ_g_sum +=AccelZ_g;
+        cnt++;
+    }
+    if (cnt == 1024){
+        AccelX_g_sum /= 1024;
+        AccelY_g_sum /= 1024;
+        AccelZ_g_sum /= 1024;
+    }
+    return [AccelX_g_sum, AccelY_g_sum, AccelZ_g_sum];
+}
+/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -207,23 +245,39 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   MPU6050_Init();
 
   /* USER CODE END 2 */
+    float AccelX_cal;
+    float AccelY_cal;
+    float AccelZ_cal;
+    [AccelX_cal, AccelY_cal, AccelZ_cal] = MPU6050_Calibration();
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
     MPU6050_Read_Accel(&AccelX, &AccelY, &AccelZ);
 
     AccelX_g = MPU6050_Convert_to_g(AccelX);
     AccelY_g = MPU6050_Convert_to_g(AccelY);
     AccelZ_g = MPU6050_Convert_to_g(AccelZ);
+
+    AccelX_g -= AccelX_cal;
+    AccelY_g -= AccelY_cal;
+    AccelZ_g -= AccelZ_cal;
+
+
+//    Accel_xyz data;
+//    data.AccelX_g = AccelX_g;
+//    data.AccelY_g = AccelY_g;
+//    data.AccelZ_g = AccelZ_g;
+//    HAL_UART_Transmit(&huart1, (const uint8_t* )&data, sizeof(data), 1000);
+//
 
     // LED BLINKING
     HAL_GPIO_TogglePin (GPIOA, GPIO_PIN_5);
@@ -309,6 +363,39 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 
 }
 
